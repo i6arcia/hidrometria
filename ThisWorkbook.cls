@@ -31,5 +31,6 @@ Private Sub Workbook_Open()
         Range("F9:H" & lastRow).ClearContents
     End If
     Vesp.acumuladas
+    Vesp.ultNiv
     Vesp.desviacionStd
 End Sub
