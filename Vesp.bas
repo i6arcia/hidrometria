@@ -265,11 +265,15 @@ Dim diasDif As Integer
         'Almacena la clave de la estacion
         clvEs = Range("B" & i).Value
         'Consulta desviacion estandar
-        qry = "SELECT STD(valuee) FROM dtNivel WHERE station = '" & clvEs & "' AND datee >= '" & Format(fechaDif, "yyyy/mm/dd hh:mm") & "' AND datee<= '" & Format(fecha, "yyyy/mm/dd") & " 17:00'"
+        qry = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvEs & "' AND datee >= '" & Format(fechaDif, "yyyy/mm/dd hh:mm") & "' AND datee<= '" & Format(fecha, "yyyy/mm/dd") & " 17:00'"
         'MsgBox qry
         adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
             If Not adoRs.EOF Then
-                Range("M" & i).CopyFromRecordset adoRs
+                If (adoRs!desEs = 0) Then
+                    Range("M" & i).Value = ""
+                Else
+                    Range("M" & i).CopyFromRecordset adoRs
+                End If
             End If
         adoRs.Close
     Next i
@@ -277,7 +281,46 @@ Dim diasDif As Integer
     dbSIH.Close
 
 End Sub
+Sub lastNiv()
 
+'Variables para conexción a la Base de Datos
+Dim dbSIH As New ADODB.Connection
+Dim adoRs As New ADODB.Recordset
+Dim qry As String
+'Variables hidrometricas
+Dim clvEs As String
+'Otras variables
+Dim fecha As String
+Dim lastRow As Integer
+
+    'Obtiene el numero de la ultima fila
+    lastRow = Range("B" & rows.Count).End(xlUp).Row
+    'Obtiene la fecha actual
+    fecha = Format(Now, "yyyy/mm/dd")
+    'Limpia contenido
+    Range("L9:L" & lastRow).ClearContents
+    
+    
+    'Conexción
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Obtiene el ultimo registro de nivel capturado
+    For i = 9 To lastRow
+        'Almacena la clave de la estacion
+        clvEs = Range("B" & i).Value
+        'Consulta desviacion estandar
+        qry = "SELECT valuee AS val FROM dtNivel WHERE station = '" & clvEs & "' AND datee >= '" & fecha & " 00:00' AND datee <= '" & fecha & " 23:59' ORDER BY Datee DESC LIMIT 1"
+        adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
+            If Not adoRs.EOF Then
+                Range("L" & i).Value = Format(adoRs!Val, "0.00")
+            End If
+        adoRs.Close
+    Next i
+    'Fin de la conexción
+    dbSIH.Close
+
+End Sub
 
 Private Sub rojo(col As String, rows As String)
     Range(col & rows).Interior.Color = vbRed
