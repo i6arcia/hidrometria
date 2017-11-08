@@ -8,12 +8,12 @@ Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 'Capturar los datos en SIH despues de que se ejecute el comando de guardar archivo
-Private Sub Workbook_AfterSave(ByVal Success As Boolean)
-    Vesp.capturar
-End Sub
-Private Sub Workbook_Open()
-    Vesp.getDatos
-    Vesp.acumuladas
-    Vesp.ultNiv
-    Vesp.desviacionStd
-End Sub
+'Private Sub Workbook_AfterSave(ByVal Success As Boolean)
+'    Vesp.capturar
+'End Sub
+'Private Sub Workbook_Open()
+'    Vesp.getDatos
+'    Vesp.acumuladas
+'    Vesp.ultNiv
+'    Vesp.desviacionStd
+'End Sub
