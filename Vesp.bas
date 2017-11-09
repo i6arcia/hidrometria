@@ -1,119 +1,112 @@
 Attribute VB_Name = "Vesp"
-'Llena las celdas con los valores capturados a las 17 horas si existen
-Sub getDatos()
-'Variables para conexión a la Base de Datos
-Dim dbSIH As New ADODB.Connection
-Dim adoRs As New ADODB.Recordset
-Dim qry As String
-'Variables hidrométricas
-Dim clvEs As String
+'*********************************************************************
+'   Sistema en apoyo a la captura de informacion hidroclimatologica
+'          para la dirección técnica en OCGC, CONAGUA
+'*********************************************************************
+Option Explicit
+'Variables para conexion a la base de datos
+Private dbSIH As New ADODB.Connection
+Private adoRs As New ADODB.Recordset
+Private query As String
 'Otras variables
-Dim fecha As String
-Dim lastRow As Integer
-Dim Flag1 As Boolean
-Dim i As Integer
+Private clvEst As String
+Public fecha As String
+Private ultFil As Integer
+Private i As Integer
+
+'Obtiene datos capturados a las 17 horas si existen
+Sub getDatos()
+    Dim bandera1 As Boolean
+    Dim bandera2 As Boolean
 
     'Obtiene el número de la última fila
-    lastRow = Range("B" & rows.Count).End(xlUp).Row
+    ultFil = Range("B" & rows.Count).End(xlUp).Row
     'Obtiene la fecha actual
     fecha = Format(Now, "yyyy/mm/dd")
     'Limpia contenido
-    Range("F9:H" & lastRow).ClearContents
+    Range("F9:H" & ultFil).ClearContents
+    
+    bandera1 = True
+    bandera2 = True
     
     'Conexión
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
     
     'Obtiene los valores capturados a las 17 horas si existieran
-    For i = 9 To lastRow
+    For i = 9 To ultFil
         'Almacena la clave de la estación
-        clvEs = Range("B" & i).Value
+        clvEst = Range("B" & i).Value
         'Inicia bandera
-        Flag1 = esEstacion(clvEs, i)
-        'Valida Clave de estación
-        
-        If Flag1 Then
-            'Consulta temperatura y la escribe
-            qry = "SELECT valuee FROM dttempaire WHERE station = '" & clvEs & "' AND datee = '" & fecha & " 17:00'"
-            adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
+        bandera1 = esEstacion(clvEst, i)
+
+        If bandera1 Then
+            'Consulta temperatura y escribe
+            query = "SELECT valuee FROM dttempaire WHERE station = '" & clvEst & "' AND datee = '" & fecha & " 17:00'"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     Range("F" & i).CopyFromRecordset adoRs
                 End If
             adoRs.Close
-            'Consulta Lluvia y la escribe
-            qry = "SELECT valuee FROM dtprecipitacio WHERE station = '" & clvEs & "' AND datee = '" & fecha & " 17:00'"
-            adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
+            'Consulta Lluvia y escribe
+            query = "SELECT valuee FROM dtprecipitacio WHERE station = '" & clvEst & "' AND datee = '" & fecha & " 17:00'"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
-                    Range("G" & i).CopyFromRecordset adoRs
+                    Range("G" & i).Value = Range("K" & i).Value
                 End If
             adoRs.Close
-            'Consulta nivel y la escribe
-            qry = "SELECT valuee FROM dtnivel WHERE station = '" & clvEs & "' AND datee = '" & fecha & " 17:00'"
-            adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
+            'Consulta nivel y escribe
+            query = "SELECT valuee FROM dtnivel WHERE station = '" & clvEst & "' AND datee = '" & fecha & " 17:00'"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     Range("H" & i).CopyFromRecordset adoRs
                 End If
             adoRs.Close
+        Else
+            bandera2 = False
         End If
     Next i
     'Fin de la conexión
     dbSIH.Close
+    'Mensaje en caso de haber error
+    If (Not bandera2) Then
+        MsgBox "Alguna(s) claves no son correctas", vbCritical, "ERROR"
+    End If
 End Sub
-'Obtiene las lluvias acumuladas de las 8 a 17 horas
+
+'Obtiene lluvias acumuladas de 8 a 17 horas
 Sub acumuladas()
-'Variables para conexión a la Base de Datos
-Dim dbSIH As New ADODB.Connection
-Dim adoRs As New ADODB.Recordset
-Dim qry As String
-'Variables hidrométricas
-Dim clvEs As String
-Dim lluvAcu As String
-'Otras variables
-Dim fecha As String
-Dim lastRow As Integer
-Dim Flag1 As Boolean
-Dim flag2 As Boolean
+    'Variables hidrométricas
+    Dim lluvAcu As String
+    'Otras variables
+    Dim bandera1 As Boolean
+    Dim bandera2 As Boolean
 
     'Obtiene el número de la última fila
-    lastRow = Range("B" & rows.Count).End(xlUp).Row
+    ultFil = Range("B" & rows.Count).End(xlUp).Row
     'Obtiene la fecha actual
     fecha = Format(Now, "yyyy/mm/dd")
     'Selecciona contenido y lo limpia
-    Range("K9:K" & lastRow).ClearContents
+    Range("K9:K" & ultFil).ClearContents
     'Bandera que indica un error en los datos
-    flag2 = True
+    bandera1 = True
+    bandera2 = True
     
     'Conexión
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
     'Obtiene lluvias acumuladas
-    For i = 9 To lastRow
+    For i = 9 To ultFil
         'Almacena la clave de la estación
-        clvEs = Range("B" & i).Value
+        clvEst = Range("B" & i).Value
         'Inicia bandera
-        Flag1 = True
-        'Valida Clave de estación
-        If clvEs = "" Then
-            rojo "B", CStr(i)
-            Flag1 = False
-            flag2 = False
-        ElseIf (Len(clvEs) <> 5) Then
-            rojo "B", CStr(i)
-            Flag1 = False
-            flag2 = False
-        Else
-            If (clvEs = "TXPVC" Or clvEs = "XOBVC" Or clvEs = "VERVC" Or clvEs = "ORZVC" Or clvEs = "COTVC") Then
-                Range("B" & i).Interior.Color = RGB(255, 230, 153)
-            Else
-                Range("B" & i).Interior.Color = RGB(255, 242, 204)
-            End If
-        End If
+        bandera1 = esEstacion(clvEst, i)
         
-        If (Flag1) Then
-            qry = "Select sum(valuee) as Acumulado from dtPrecipitacio where station = '" & clvEs & "' and datee >= '" & fecha & " 08:00' and datee <= '" & fecha & " 17:00'"
-            adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
+        If (bandera1) Then
+            query = "Select sum(valuee) as Acumulado from dtPrecipitacio where station = '" & clvEst & "' and datee >= '" & fecha & " 08:00' and datee <= '" & fecha & " 17:00'"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
-                    'Cambia color de fuente dependiendo con lluvia y sin lluvia
+                    'Cambia color de fuente de acuerdo a la situación (lluvia/sin lluvia)
                     If (adoRs!Acumulado > 0) Then
                         Range("K" & i).Font.Color = vbBlue
                     ElseIf (adoRs!Acumulado = 0) Then
@@ -127,78 +120,76 @@ Dim flag2 As Boolean
                     Else
                         Range("K" & i).Formula = Format(adoRs!Acumulado, "0.0")
                     End If
-                Else
-                    Range("K" & i).Formula = "Err"
-                    Range("K" & i).Interior.Color = "Red"
                 End If
             adoRs.Close
+        Else
+            bandera2 = False
         End If
     Next i
 
     'Fin de la conexión
     dbSIH.Close
     'Mensaje en caso de haber error
-    If (Not flag2) Then
+    If (Not bandera2) Then
         MsgBox "Alguna(s) claves no son correctas", vbCritical, "ERROR"
     End If
-
 End Sub
-'Obtiene el último nivel del escala capturado en el SIH del día
-Sub ultNiv()
-'Variables para conexión a la Base de Datos
-Dim dbSIH As New ADODB.Connection
-Dim adoRs As New ADODB.Recordset
-Dim qry As String
-'Variables hidrométricas
-Dim clvEs As String
-'Otras variables
-Dim fecha As String
-Dim lastRow As Integer
 
-    'Obtiene el numero de la ultima fila
-    lastRow = Range("B" & rows.Count).End(xlUp).Row
+'Obtiene último nivel de escala capturado en el SIH del día
+Sub ultNiv()
+    Dim bandera1 As Boolean
+    Dim bandera2 As Boolean
+
+    'Obtiene el número de la última fila
+    ultFil = Range("B" & rows.Count).End(xlUp).Row
     'Obtiene la fecha actual
     fecha = Format(Now, "yyyy/mm/dd")
     'Limpia contenido
-    Range("L9:L" & lastRow).ClearContents
+    Range("L9:L" & ultFil).ClearContents
     
+    bandera1 = True
+    bandera2 = True
     
     'Conexión
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
     
-    'Obtiene el ultimo registro de nivel capturado
-    For i = 9 To lastRow
+    'Obtiene el último registro de nivel capturado
+    For i = 9 To ultFil
         'Almacena la clave de la estación
-        clvEs = Range("B" & i).Value
-        'Consulta el último nivel de escala registrado al día
-        qry = "SELECT valuee AS val FROM dtNivel WHERE station = '" & clvEs & "' AND datee >= '" & fecha & " 00:00' AND datee <= '" & fecha & " 16:59' ORDER BY Datee DESC LIMIT 1"
-        adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
-            If Not adoRs.EOF Then
-                Range("L" & i).Value = Format(adoRs!Val, "0.00")
-            End If
-        adoRs.Close
+        clvEst = Range("B" & i).Value
+        'Inicia bandera
+        bandera1 = esEstacion(clvEst, i)
+        
+        If (bandera1) Then
+            'Consulta el último nivel de escala registrado al día
+            query = "SELECT valuee AS val FROM dtNivel WHERE station = '" & clvEst & "' AND datee >= '" & fecha & " 00:00' AND datee <= '" & fecha & " 16:59' ORDER BY Datee DESC LIMIT 1"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+                If Not adoRs.EOF Then
+                    Range("L" & i).Value = Format(adoRs!Val, "0.00")
+                End If
+            adoRs.Close
+        Else
+            bandera2 = False
+        End If
     Next i
+    
     'Fin de la conexión
     dbSIH.Close
-
+    'Mensaje en caso de haber error
+    If (Not bandera2) Then
+        MsgBox "Alguna(s) claves no son correctas", vbCritical, "ERROR"
+    End If
 End Sub
 'Obtiene la desviación estándar de los niveles de escala
 Sub desviacionStd()
-'Variables para conexión a la Base de Datos
-Dim dbSIH As New ADODB.Connection
-Dim adoRs As New ADODB.Recordset
-Dim qry As String
-'Variables hidrométricas
-Dim clvEs As String
-'Otras variables
-Dim fecha As Date
-Dim fechaDif As Date
-Dim lastRow As Integer
-Dim diasDif As Integer
+    Dim fechaDif As Date
+    Dim diasDif As Integer
+    Dim bandera1 As Boolean
+    Dim bandera2 As Boolean
 
     'Obtiene el número de la última fila
-    lastRow = Range("B" & rows.Count).End(xlUp).Row
+    ultFil = Range("B" & rows.Count).End(xlUp).Row
     'Número de días para obtener desviación estándar
     diasDif = 30
     'Obtiene la fecha actual
@@ -206,206 +197,194 @@ Dim diasDif As Integer
     'Fecha N días anterior
     fechaDif = DateDiff("d", diasDif, fecha)
     'Limpia contenido
-    Range("M9:M" & lastRow).ClearContents
+    Range("M9:M" & ultFil).ClearContents
     
+    bandera1 = True
+    bandera2 = True
     
     'Conexión
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
     
     'Obtiene la desviación estándar del nivel de cada estacion
-    For i = 9 To lastRow
+    For i = 9 To ultFil
         'Almacena la clave de la estación
-        clvEs = Range("B" & i).Value
-        'Consulta desviación estándar
-        qry = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvEs & "' AND datee >= '" & Format(fechaDif, "yyyy/mm/dd hh:mm") & "' AND datee<= '" & Format(fecha, "yyyy/mm/dd") & " 17:00'"
-        adoRs.Open qry, dbSIH, adOpenStatic, adLockReadOnly
-            If Not adoRs.EOF Then
-                If (adoRs!desEs = 0) Then
-                    Range("M" & i).Value = ""
-                Else
-                    Range("M" & i).CopyFromRecordset adoRs
+        clvEst = Range("B" & i).Value
+        'Inicia bandera
+        bandera1 = esEstacion(clvEst, i)
+        
+        If (bandera1) Then
+            'Consulta desviación estándar
+            query = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvEst & "' AND datee >= '" & Format(fechaDif, "yyyy/mm/dd hh:mm") & "' AND datee<= '" & Format(fecha, "yyyy/mm/dd") & " 17:00'"
+            adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+                If Not adoRs.EOF Then
+                    If (adoRs!desEs = 0) Then
+                        Range("M" & i).Value = ""
+                    Else
+                        Range("M" & i).CopyFromRecordset adoRs
+                    End If
                 End If
-            End If
-        adoRs.Close
+            adoRs.Close
+        Else
+            bandera2 = False
+        End If
     Next i
     'Fin de la conexión
     dbSIH.Close
-
+    'Mensaje en caso de haber error
+    If (Not bandera2) Then
+        MsgBox "Alguna(s) claves no son correctas", vbCritical, "ERROR"
+    End If
 End Sub
+
 Sub capturar()
+    'Variables hidrométricas
+    Dim tmax As String
+    Dim lluv As String
+    Dim niv As String
+    Dim lluvAcum As String
+    Dim desA As Double
+    Dim desB As Double
+    'Otras variables
+    Dim bandera1 As Boolean
+    Dim bandera2 As Boolean
 
-'Variables para conexión a la base de datos
-Dim dbSIH As New ADODB.Connection
-Dim adoRs As New ADODB.Recordset
-Dim qry As String
-'Variables hidrométricas
-Dim clvEs As String
-Dim tmax As String
-Dim lluv As String
-Dim niv As String
-Dim lluvAcum As String
-Dim desA As Double
-Dim desB As Double
-'Otras variables
-Dim numRows As Integer
-Dim Flag1 As Boolean
-Dim flag2 As Boolean
-Dim fecha As String
-Dim lastRow As Integer
-
-'Obtiene el número de la última fila
-numRows = Range("B" & rows.Count).End(xlUp).Row
-'Obtiene la fecha actual
-fecha = Format(Now, "yyyy/mm/dd") & " 17:00"
-'Bandera determina error en los datos
-flag2 = True
-'Obtiene el número de la última fila
-lastRow = Range("B" & rows.Count).End(xlUp).Row
-
-'Conexión a la base de datos
-dbSIH.ConnectionString = "SIH"
-dbSIH.Open
-
-'Captura datos en SIH
-For i = 9 To lastRow
-    'Obtiene datos hidrométricos
-    clvEs = Range("B" & i).Value
-    tmax = Range("F" & i).Value
-    lluv = Range("G" & i).Value
-    niv = Range("H" & i).Value
-    lluvAcum = Format(Val(Range("K" & i).Value), "0.0")
-    desA = Range("L" & i).Value + Range("M" & i).Value
-    desB = Range("L" & i).Value - Range("M" & i).Value
-    'Iniciamos suponiendo que los datos son correctos
-    Flag1 = True
+    'Obtiene el número de la última fila
+    ultFil = Range("B" & rows.Count).End(xlUp).Row
+    'Obtiene la fecha actual
+    fecha = Format(Now, "yyyy/mm/dd") & " 17:00"
     
-    'Valida Clave de estación
-    If clvEs = "" Then
-        rojo "B", CStr(i)
-        Flag1 = False
-        flag2 = False
-    ElseIf (Len(clvEs) <> 5) Then
-        rojo "B", CStr(i)
-        Flag1 = False
-        flag2 = False
-    Else
-        If (clvEs = "TXPVC" Or clvEs = "XOBVC" Or clvEs = "VERVC" Or clvEs = "ORZVC" Or clvEs = "COTVC") Then
-            Range("B" & i).Interior.Color = RGB(255, 230, 153)
-        Else
-            Range("B" & i).Interior.Color = RGB(255, 242, 204)
-        End If
-    End If
+    'Banderas determina error en los datos
+    bandera1 = True
+    bandera2 = True
     
-    'Valida valor temperatura máxima
-    If Flag1 Then
-        If (tmax <> "") Then
-            If Not (IsNumeric(tmax)) Then
-                rojo "F", CStr(i)
-                Flag1 = False
-                flag2 = False
-            ElseIf (tmax < 0 And tmax > 60) Then
-                rojo "F", CStr(i)
-                Flag1 = False
-                flag2 = False
-            Else
-                tmax = Format(tmax, "0.0")
-                blanco "F", CStr(i)
+    'Conexión a la base de datos
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Captura datos en SIH
+    For i = 9 To ultFil
+        'Obtiene datos hidrométricos
+        clvEst = Range("B" & i).Value
+        tmax = Range("F" & i).Value
+        lluv = Range("G" & i).Value
+        niv = Range("H" & i).Value
+        lluvAcum = Range("K" & i).Value
+        desA = Range("L" & i).Value + Range("M" & i).Value
+        desB = Range("L" & i).Value - Range("M" & i).Value
+        
+        bandera1 = esEstacion(clvEst, i)
+        
+        'Valida valor temperatura máxima
+        If (bandera1) Then
+            If (tmax <> "") Then
+                If Not (IsNumeric(tmax)) Then
+                    rojo "F", CStr(i)
+                    bandera1 = False
+                    bandera2 = False
+                ElseIf (tmax < 0 And tmax > 60) Then
+                    rojo "F", CStr(i)
+                    bandera1 = False
+                    bandera2 = False
+                Else
+                    tmax = Format(tmax, "0.0")
+                    blanco "F", CStr(i)
+                End If
             End If
+        Else
+            bandera2 = False
         End If
-    End If
-    'Valida valor lluvia
-    If Flag1 Then
-        If (lluv <> "") Then
-            If Not (IsNumeric(lluv)) Then
-                If (lluv = "inap" Or lluv = "INAP" Or lluv = "Inap") Then
-                    lluv = 0.01
+        'Valida valor lluvia
+        If bandera1 Then
+            If (lluv <> "") Then
+                If Not (IsNumeric(lluv)) Then
+                    If (lluv = "inap" Or lluv = "INAP" Or lluv = "Inap") Then
+                        lluv = 0.01
+                        blanco "G", CStr(i)
+                    Else
+                        rojo "G", CStr(i)
+                        bandera1 = False
+                        bandera2 = False
+                    End If
+                ElseIf (lluv < 0) Then
+                    rojo "G", CStr(i)
+                    bandera1 = False
+                    bandera2 = False
+                ElseIf (lluv <> 0.01) Then
+                    lluv = Format(lluv, "0.0")
                     blanco "G", CStr(i)
+                End If
+                
+                If (lluvAcum = "Inap") Then
+                    If (lluv = 0.01) Then
+                        lluv = 0
+                    End If
+                ElseIf (lluv >= lluvAcum) Then
+                    lluv = Format(lluv - lluvAcum, "0.0")
                 Else
                     rojo "G", CStr(i)
-                    Flag1 = False
-                    flag2 = False
+                    bandera1 = False
+                    bandera2 = False
                 End If
-            ElseIf (lluv < 0) Then
-                rojo "G", CStr(i)
-                Flag1 = False
-                flag2 = False
-            ElseIf (lluv <> 0.01) Then
-                lluv = Format(lluv, "0.0")
-                blanco "G", CStr(i)
-            End If
-            
-            If (lluv >= lluvAcum) Then
-                lluv = lluv - lluvAcum
-            Else
-                rojo "G", CStr(i)
-                Flag1 = False
-                flag2 = False
             End If
         End If
-    End If
-    'Continúa validando valor de escala
-    If Flag1 Then
-        If (niv <> "") Then
-            If Not (IsNumeric(niv)) Then
-                rojo "H", CStr(i)
-                Flag1 = False
-                flag2 = False
-            ElseIf (Range("L" & i).Value = "") Then
-                niv = Format(niv, "0.00")
-                blanco "H", CStr(i)
-            ElseIf (niv >= desB And niv <= desA) Then
-                niv = Format(niv, "0.00")
-                blanco "H", CStr(i)
-            Else
-                rojo "H", CStr(i)
-                Flag1 = False
-                flag2 = False
+        'Continúa validando valor de escala
+        If bandera1 Then
+            If (niv <> "") Then
+                If Not (IsNumeric(niv)) Then
+                    rojo "H", CStr(i)
+                    bandera1 = False
+                    bandera2 = False
+                ElseIf (Range("L" & i).Value = "") Then
+                    niv = Format(niv, "0.00")
+                    blanco "H", CStr(i)
+                ElseIf (niv >= desB And niv <= desA) Then
+                    niv = Format(niv, "0.00")
+                    blanco "H", CStr(i)
+                Else
+                    rojo "H", CStr(i)
+                    bandera1 = False
+                    bandera2 = False
+                End If
             End If
         End If
+        'Captura datos en SIH
+        If (bandera1) Then
+            'Captura temperatura máxima
+            If (tmax <> "") Then
+                query = "REPLACE INTO dttempaire (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + tmax + "', '" + tmax + "', ' ', 'XL', ' ')"
+                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+            End If
+            'Captura lluvia
+            If (lluv <> "") Then
+                query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + lluv + "', '" + lluv + "', ' ', 'XL', ' ')"
+                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+            End If
+            'Captura nivel
+            If (niv <> "") Then
+                query = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
+                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+            End If
+        End If
+    Next i
+    
+    'Fin de la conexión
+    dbSIH.Close
+    'Mensaje en caso de haber error
+    If bandera2 Then
+        Range("K6").Value = "Última captura " & Format(Now, "dd/mmm/yyyy hh:mm") & " horas."
+    Else
+        MsgBox "Algunos datos son incorrectos", vbCritical, "ERROR"
     End If
-    'Captura datos en SIH
-    If (Flag1) Then
-        'Captura temperatura máxima
-        If (tmax <> "") Then
-            qry = "REPLACE INTO dttempaire (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEs + "', '" + fecha + "', '" + tmax + "', '" + tmax + "', ' ', 'XL', ' ')"
-            adoRs.Open qry, dbSIH, adOpenDynamic, adLockOptimistic
-        End If
-        'Captura lluvia
-        If (lluv <> "") Then
-            qry = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEs + "', '" + fecha + "', '" + lluv + "', '" + lluv + "', ' ', 'XL', ' ')"
-            adoRs.Open qry, dbSIH, adOpenDynamic, adLockOptimistic
-        End If
-        'Captura nivel
-        If (niv <> "" And Flag1) Then
-            qry = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEs + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
-            adoRs.Open qry, dbSIH, adOpenDynamic, adLockOptimistic
-        End If
-    End If
-Next i
-
-'Fin de la conexión
-dbSIH.Close
-
-If flag2 Then
-    MsgBox "Captura de datos en SIH terminada", vbOKOnly, "SIH"
-Else
-    MsgBox "Algunos datos no son correctos", vbCritical, "ERROR"
-End If
-
 End Sub
-
+'Cambia color de fondo a la celda
 Private Sub rojo(col As String, rows As String)
     Range(col & rows).Interior.Color = vbRed
 End Sub
 Private Sub blanco(col As String, rows As String)
     Range(col & rows).Interior.Color = xlNone
 End Sub
-
-Private Sub err()
-    MsgBox "Se encontraron algunos ERRORES", vbCritical, "ERROR"
-End Sub
-
+'Valida si la clave de estación es correcta
 Private Function esEstacion(est As String, lin As Integer) As Boolean
     If est = "" Then
         rojo "B", CStr(lin)

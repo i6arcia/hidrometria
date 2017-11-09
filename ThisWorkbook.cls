@@ -7,7 +7,11 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
-'Capturar los datos en SIH despues de que se ejecute el comando de guardar archivo
+'*********************************************************************
+'   Sistema en apoyo a la captura de informacion hidroclimatologica
+'          para la dirección técnica en OCGC, CONAGUA
+'*********************************************************************
+
 Private Sub Workbook_AfterSave(ByVal Success As Boolean)
     Vesp.capturar
 End Sub
