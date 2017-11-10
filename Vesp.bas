@@ -75,7 +75,7 @@ Sub getDatos()
 End Sub
 
 'Obtiene lluvias acumuladas de 8 a 17 horas
-Sub acumuladas()
+Sub acumuladas(hora As String)
     'Variables hidrométricas
     Dim lluvAcu As String
     'Otras variables
@@ -103,7 +103,7 @@ Sub acumuladas()
         bandera1 = esEstacion(clvEst, i)
         
         If (bandera1) Then
-            query = "Select sum(valuee) as Acumulado from dtPrecipitacio where station = '" & clvEst & "' and datee >= '" & fecha & " 08:00' and datee <= '" & fecha & " 17:00'"
+            query = "Select sum(valuee) as Acumulado from dtPrecipitacio where station = '" & clvEst & "' and datee >= '" & fecha & " 08:00' and datee <= '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     'Cambia color de fuente de acuerdo a la situación (lluvia/sin lluvia)
@@ -258,6 +258,8 @@ Sub capturar()
     bandera1 = True
     bandera2 = True
     
+    acumuladas ("16:59")
+    
     'Conexión a la base de datos
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
@@ -272,6 +274,7 @@ Sub capturar()
         lluvAcum = Range("K" & i).Value
         desA = Range("L" & i).Value + Range("M" & i).Value
         desB = Range("L" & i).Value - Range("M" & i).Value
+        
         
         bandera1 = esEstacion(clvEst, i)
         
@@ -315,12 +318,15 @@ Sub capturar()
                     blanco "G", CStr(i)
                 End If
                 
-                If (lluvAcum = "Inap") Then
-                    If (lluv = 0.01) Then
-                        lluv = 0
+                'Valida lluvia acumulada
+                If (lluvAcum = "" Or lluvAcum = "Inap") Then
+                    lluvAcum = 0
+                End If
+                
+                If (lluv >= lluvAcum) Then
+                    If (lluv <> 0.01) Then
+                        lluv = Format(lluv - lluvAcum, "0.0")
                     End If
-                ElseIf (lluv >= lluvAcum) Then
-                    lluv = Format(lluv - lluvAcum, "0.0")
                 Else
                     rojo "G", CStr(i)
                     bandera1 = False
@@ -370,6 +376,9 @@ Sub capturar()
     
     'Fin de la conexión
     dbSIH.Close
+    
+    acumuladas ("17:00")
+    
     'Mensaje en caso de haber error
     If bandera2 Then
         Range("K6").Value = "Última captura " & Format(Now, "dd/mmm/yyyy hh:mm") & " horas."

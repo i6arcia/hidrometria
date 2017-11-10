@@ -19,8 +19,8 @@ Private Sub Workbook_Open()
     
     Range("C6").Value = "Xalapa, Ver., a " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy")
     
-    Vesp.getDatos
-    Vesp.acumuladas
+    Vesp.acumuladas ("17:00")
     Vesp.ultNiv
     Vesp.desviacionStd
+    Vesp.getDatos
 End Sub
