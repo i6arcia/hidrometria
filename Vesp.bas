@@ -249,6 +249,8 @@ Sub capturar()
     Dim bandera1 As Boolean
     Dim bandera2 As Boolean
 
+    acumuladas ("16:59")
+    
     'Obtiene el número de la última fila
     ultFil = Range("B" & rows.Count).End(xlUp).Row
     'Obtiene la fecha actual
@@ -258,7 +260,6 @@ Sub capturar()
     bandera1 = True
     bandera2 = True
     
-    acumuladas ("16:59")
     
     'Conexión a la base de datos
     dbSIH.ConnectionString = "SIH"
@@ -300,6 +301,7 @@ Sub capturar()
         'Valida valor lluvia
         If bandera1 Then
             If (lluv <> "") Then
+                'Valida lluvia
                 If Not (IsNumeric(lluv)) Then
                     If (lluv = "inap" Or lluv = "INAP" Or lluv = "Inap") Then
                         lluv = 0.01
@@ -309,23 +311,28 @@ Sub capturar()
                         bandera1 = False
                         bandera2 = False
                     End If
-                ElseIf (lluv < 0) Then
+                ElseIf (lluv >= 0) Then
+                    If (CDbl(lluv) <> 0.01) Then
+                        lluv = Format(lluv, "0.0")
+                        blanco "G", CStr(i)
+                    End If
+                Else
                     rojo "G", CStr(i)
                     bandera1 = False
                     bandera2 = False
-                ElseIf (lluv <> 0.01) Then
-                    lluv = Format(lluv, "0.0")
-                    blanco "G", CStr(i)
                 End If
                 
                 'Valida lluvia acumulada
-                If (lluvAcum = "" Or lluvAcum = "Inap") Then
+                If (lluvAcum = "") Then
                     lluvAcum = 0
+                ElseIf (lluvAcum = "Inap") Then
+                    lluvAcum = 0.01
                 End If
                 
-                If (lluv >= lluvAcum) Then
+                'Compara lluvia con acumulada
+                If (CDbl(lluv) >= CDbl(lluvAcum)) Then
                     If (lluv <> 0.01) Then
-                        lluv = Format(lluv - lluvAcum, "0.0")
+                        lluv = Format(CDbl(lluv) - CDbl(lluvAcum), "0.0")
                     End If
                 Else
                     rojo "G", CStr(i)
