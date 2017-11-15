@@ -60,6 +60,7 @@ Sub getDatos()
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     Range("H" & i).CopyFromRecordset adoRs
+                    namoEst CStr(i)
                 End If
             adoRs.Close
         Else
@@ -377,6 +378,7 @@ Sub capturar()
             If (niv <> "") Then
                 query = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
                 adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                namoEst CStr(i)
             End If
         End If
     Next i
@@ -393,6 +395,38 @@ Sub capturar()
         MsgBox "Algunos datos son incorrectos", vbCritical, "ERROR"
     End If
 End Sub
+
+'Valida el NAMO de la estación
+Sub namoEst(fila As String)
+    Dim namo As String
+    Dim esc As Double
+    Dim s As Double
+    
+    namo = Range("I" + fila).Value
+    esc = Range("H" + fila).Value
+    s = Range("M" + fila).Value
+        
+    If (namo <> "") Then
+            If (esc > CDbl(namo)) Then
+                'El nivel de escala esta por arriba de su NAMO
+                Range("H" & fila).Font.Color = vbRed
+                Range("H" & fila).Interior.Color = vbYellow
+                Range("H" & fila).Font.Bold = True
+            ElseIf (esc > (CDbl(namo) - s)) Then
+                'El nivel de escala se aproxima a su NAMO
+                Range("H" & fila).Font.Color = vbBlack
+                Range("H" & fila).Interior.Color = vbYellow
+                Range("H" & fila).Font.Bold = True
+            Else
+                'El nivel de escala esta por debajo de su namo
+                Range("H" & fila).Font.Color = vbBlack
+                Range("H" & fila).Interior.Color = xlNone
+                Range("H" & fila).Font.Bold = False
+            End If
+    End If
+    
+End Sub
+
 'Cambia color de fondo a la celda
 Private Sub rojo(col As String, rows As String)
     Range(col & rows).Interior.Color = vbRed
