@@ -12,9 +12,11 @@ Attribute VB_Exposed = True
 '          para la dirección técnica en OCGC, CONAGUA
 '*********************************************************************
 
-Private Sub Workbook_AfterSave(ByVal Success As Boolean)
+
+Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
     Vesp.capturar
 End Sub
+
 Private Sub Workbook_Open()
     
     Range("C6").Value = "Xalapa, Ver., a " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy")
@@ -24,3 +26,5 @@ Private Sub Workbook_Open()
     Vesp.desviacionStd
     Vesp.getDatos
 End Sub
+
+

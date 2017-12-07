@@ -12,7 +12,8 @@ Private query As String
 Private clvEst As String
 Public fecha As String
 Private ultFil As Integer
-Private i As Integer
+Public i As Integer
+Public ErrRes As Boolean
 
 'Obtiene datos capturados a las 17 horas si existen
 Sub getDatos()
@@ -185,18 +186,18 @@ End Sub
 'Obtiene la desviación estándar de los niveles de escala
 Sub desviacionStd()
     Dim fechaDif As Date
-    Dim diasDif As Integer
+    Dim mesDif As Integer
     Dim bandera1 As Boolean
     Dim bandera2 As Boolean
 
     'Obtiene el número de la última fila
     ultFil = Range("B" & rows.Count).End(xlUp).Row
-    'Número de días para obtener desviación estándar
-    diasDif = 30
+    'Número de meses de diferencia para obtener desviación estándar
+    mesDif = -1
     'Obtiene la fecha actual
     fecha = Format(Now, "short date")
     'Fecha N días anterior
-    fechaDif = DateDiff("d", diasDif, fecha)
+    fechaDif = DateAdd("m", mesDif, fecha)
     'Limpia contenido
     Range("M9:M" & ultFil).ClearContents
     
@@ -249,7 +250,12 @@ Sub capturar()
     'Otras variables
     Dim bandera1 As Boolean
     Dim bandera2 As Boolean
+    'Variable Error en sintaxis de la variable
+    Dim ers As Boolean
+    'Variable Error en el calculo del dato
+    Dim erc As Boolean
 
+    'Obtiene las lluvias acumuladas previas a la captura de 17 horas
     acumuladas ("16:59")
     
     'Obtiene el número de la última fila
@@ -261,14 +267,13 @@ Sub capturar()
     bandera1 = True
     bandera2 = True
     
-    
     'Conexión a la base de datos
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
     
     'Captura datos en SIH
     For i = 9 To ultFil
-        'Obtiene datos hidrométricos
+        'Obtiene los datos hidrométricos
         clvEst = Range("B" & i).Value
         tmax = Range("F" & i).Value
         lluv = Range("G" & i).Value
@@ -277,109 +282,153 @@ Sub capturar()
         desA = Range("L" & i).Value + Range("M" & i).Value
         desB = Range("L" & i).Value - Range("M" & i).Value
         
-        
+        'Valida Clave de la estación
         bandera1 = esEstacion(clvEst, i)
+        ers = esEstacion(clvEst, i)
+        erc = True
         
-        'Valida valor temperatura máxima
-        If (bandera1) Then
+        If (ers) Then
+            'Validar temperatura máxima
             If (tmax <> "") Then
                 If Not (IsNumeric(tmax)) Then
                     rojo "F", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
-                ElseIf (tmax < 0 And tmax > 60) Then
+                    ers = False
+                    'bandera1 = False
+                ElseIf (CDbl(tmax) < 0 And CDbl(tmax) > 70) Then
                     rojo "F", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
+                    erc = False
+                    'bandera1 = False
                 Else
                     tmax = Format(tmax, "0.0")
                     blanco "F", CStr(i)
                 End If
             End If
-        Else
-            bandera2 = False
-        End If
-        'Valida valor lluvia
-        If bandera1 Then
+            
+            'Validar Lluvia
             If (lluv <> "") Then
-                'Valida lluvia
                 If Not (IsNumeric(lluv)) Then
                     If (lluv = "inap" Or lluv = "INAP" Or lluv = "Inap") Then
                         lluv = 0.01
                         blanco "G", CStr(i)
                     Else
                         rojo "G", CStr(i)
-                        bandera1 = False
-                        bandera2 = False
+                        ers = False
+                        'bLluv = False
+                        'bandera1 = False
                     End If
-                ElseIf (lluv >= 0) Then
+                ElseIf (CDbl(lluv) >= 0) Then
                     If (CDbl(lluv) <> 0.01) Then
                         lluv = Format(lluv, "0.0")
                         blanco "G", CStr(i)
+                    Else
+                        Range("G" & i).Value = "Inap"
                     End If
                 Else
                     rojo "G", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
+                    ers = False
+                    'bLluv = False
+                    'bandera1 = False
                 End If
                 
-                'Valida lluvia acumulada
+                'Valida Lluvia acumulada
                 If (lluvAcum = "") Then
                     lluvAcum = 0
                 ElseIf (lluvAcum = "Inap") Then
                     lluvAcum = 0.01
+                Else
+                    lluvAcum = Format(lluvAcum, "0.0")
                 End If
                 
-                'Compara lluvia con acumulada
+                'Compara acumulada con lluvia actual
                 If (CDbl(lluv) >= CDbl(lluvAcum)) Then
-                    If (lluv <> 0.01) Then
+                    If (CDbl(lluv) <> 0.01) Then
                         lluv = Format(CDbl(lluv) - CDbl(lluvAcum), "0.0")
                     End If
                 Else
                     rojo "G", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
+                    'erc = False
+                    ers = False
+                    'bLluv = False
+                    'bandera1 = False
                 End If
             End If
-        End If
-        'Continúa validando valor de escala
-        If bandera1 Then
+            
+            'Validar Nivel
             If (niv <> "") Then
                 If Not (IsNumeric(niv)) Then
                     rojo "H", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
+                    ers = False
+                    'bNiv = False
+                    'bandera1 = False
                 ElseIf (Range("L" & i).Value = "") Then
                     niv = Format(niv, "0.00")
                     blanco "H", CStr(i)
-                ElseIf (niv >= desB And niv <= desA) Then
+                ElseIf (CDbl(niv) >= desB And CDbl(niv) <= desA) Then
                     niv = Format(niv, "0.00")
                     blanco "H", CStr(i)
                 Else
                     rojo "H", CStr(i)
-                    bandera1 = False
-                    bandera2 = False
+                    erc = False
+                    'bNiv = False
+                    'bandera1 = False
                 End If
             End If
-        End If
-        'Captura datos en SIH
-        If (bandera1) Then
-            'Captura temperatura máxima
-            If (tmax <> "") Then
-                query = "REPLACE INTO dttempaire (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + tmax + "', '" + tmax + "', ' ', 'XL', ' ')"
-                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+            
+            'CAPTURAR
+            If Not erc Then
+                frmVerificaEsc.Show
+                
+                If ErrRes Then
+                    If ers Then
+                        'Captura temperatura máxima
+                        If (tmax <> "") Then
+                            query = "REPLACE INTO dttempaire (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + tmax + "', '" + tmax + "', ' ', 'XL', ' ')"
+                            adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                            'If Not adoRs.EOF Then
+                            'End If
+                        End If
+                        'Captura lluvia
+                        If (lluv <> "") Then
+                            query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + lluv + "', '" + lluv + "', ' ', 'XL', ' ')"
+                            adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                        End If
+                        'Captura nivel
+                        If (niv <> "") Then
+                            query = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
+                            adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                            namoEst CStr(i)
+                        End If
+                    Else
+                        bandera2 = False
+                    End If
+                Else
+                    'MsgBox "El valor esta remarcado para ser corregido"
+                End If
+                
+            ElseIf ers Then
+                'Captura temperatura máxima
+                If (tmax <> "") Then
+                    query = "REPLACE INTO dttempaire (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + tmax + "', '" + tmax + "', ' ', 'XL', ' ')"
+                    adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                    'If Not adoRs.EOF Then
+                    'End If
+                End If
+                'Captura lluvia
+                If (lluv <> "") Then
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + lluv + "', '" + lluv + "', ' ', 'XL', ' ')"
+                    adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                End If
+                'Captura nivel
+                If (niv <> "") Then
+                    query = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
+                    adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                    namoEst CStr(i)
+                End If
+            Else
+                bandera2 = False
             End If
-            'Captura lluvia
-            If (lluv <> "") Then
-                query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + lluv + "', '" + lluv + "', ' ', 'XL', ' ')"
-                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
-            End If
-            'Captura nivel
-            If (niv <> "") Then
-                query = "REPLACE INTO dtnivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvEst + "', '" + fecha + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
-                adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
-                namoEst CStr(i)
-            End If
+        Else
+            bandera2 = False
         End If
     Next i
     
