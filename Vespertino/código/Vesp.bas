@@ -456,22 +456,27 @@ Sub namoEst(fila As String)
     s = Range("M" + fila).Value
         
     If (namo <> "") Then
-            If (esc > CDbl(namo)) Then
-                'El nivel de escala esta por arriba de su NAMO
-                Range("H" & fila).Font.Color = vbRed
-                Range("H" & fila).Interior.Color = vbYellow
-                Range("H" & fila).Font.Bold = True
-            ElseIf (esc > (CDbl(namo) - s)) Then
-                'El nivel de escala se aproxima a su NAMO
-                Range("H" & fila).Font.Color = vbBlack
-                Range("H" & fila).Interior.Color = vbYellow
-                Range("H" & fila).Font.Bold = True
-            Else
-                'El nivel de escala esta por debajo de su namo
-                Range("H" & fila).Font.Color = vbBlack
-                Range("H" & fila).Interior.Color = xlNone
-                Range("H" & fila).Font.Bold = False
-            End If
+        If (esc > CDbl(namo)) Then
+            'El nivel de escala esta por arriba de su NAMO
+            Range("H" & fila).Font.Color = vbRed
+            Range("H" & fila).Interior.Color = vbYellow
+            Range("H" & fila).Font.Bold = True
+        ElseIf (esc > (CDbl(namo) - s)) Then
+            'El nivel de escala se aproxima a su NAMO
+            Range("H" & fila).Font.Color = vbBlack
+            Range("H" & fila).Interior.Color = vbYellow
+            Range("H" & fila).Font.Bold = True
+        Else
+            'El nivel de escala esta por debajo de su namo
+            Range("H" & fila).Font.Color = vbBlack
+            Range("H" & fila).Interior.Color = xlNone
+            Range("H" & fila).Font.Bold = False
+        End If
+    Else
+        'El nivel de escala esta por debajo de su namo
+        Range("H" & fila).Font.Color = vbBlack
+        Range("H" & fila).Interior.Color = xlNone
+        Range("H" & fila).Font.Bold = False
     End If
     
 End Sub

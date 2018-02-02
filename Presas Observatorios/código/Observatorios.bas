@@ -18,6 +18,15 @@ Private fecha As String
 Private fechaD As String
 Private ultFil As Integer
 Private inicioFil As Integer
+Private obs As Excel.Worksheet
+
+Sub inicio()
+    Set obs = Worksheets("Observatorios")
+    obs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
+    obs.Range("E7").Interior.Color = RGB(221, 235, 247)
+    fecha = Format(Now, "yyyy/mm/dd")
+    obtenerDatos
+End Sub
 
 Sub obtenerDatos()
     Dim clvObs(6) As String
@@ -35,21 +44,24 @@ Sub obtenerDatos()
     
     inicioFil = 11
     
+    Set obs = Worksheets("Observatorios")
     
-    ultFil = Range("B" & rows.Count).End(xlUp).Row
+    ultFil = obs.Range("B" & rows.Count).End(xlUp).Row
     
     If (fecha = "") Then
-        'Obtiene la fecha actual
+        'Asigna fecha actual
         fecha = Format(Now, "yyyy/mm/dd")
+        obs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
+        obs.Range("E7").Interior.Color = RGB(221, 235, 247)
     End If
     
     'Limpia contenido
-    Range("C" & inicioFil & ":C" & ultFil).ClearContents
-    Range("F" & inicioFil & ":F" & ultFil).ClearContents
-    Range("I" & inicioFil & ":I" & ultFil).ClearContents
-    Range("L" & inicioFil & ":L" & ultFil).ClearContents
-    Range("O" & inicioFil & ":O" & ultFil).ClearContents
-    Range("R" & inicioFil & ":R" & ultFil).ClearContents
+    obs.Range("C" & inicioFil & ":C" & ultFil).ClearContents
+    obs.Range("F" & inicioFil & ":F" & ultFil).ClearContents
+    obs.Range("I" & inicioFil & ":I" & ultFil).ClearContents
+    obs.Range("L" & inicioFil & ":L" & ultFil).ClearContents
+    obs.Range("O" & inicioFil & ":O" & ultFil).ClearContents
+    obs.Range("R" & inicioFil & ":R" & ultFil).ClearContents
     
     'Conexión
     dbSIH.ConnectionString = "SIH"
@@ -58,18 +70,20 @@ Sub obtenerDatos()
     For i = 1 To 6
         col = i * 3
         For j = inicioFil To ultFil
-            hora = Format(Cells(j, col - 1).Value, "hh:mm")
+            hora = Format(obs.Cells(j, col - 1).Value, "hh:mm")
             If (IsDate(hora)) Then
+                blanco col - 1, j, obs
                 If (hora = "07:00") Then
-                    fechaD = Format(DateDiff("d", 1, fecha), "yyyy/mm/dd")
+                    'Obtiene la lluvia acumulada de 8 am del dia anterior a 7 am del día actual
+                    fechaD = Format(DateAdd("d", -1, fecha), "yyyy/mm/dd")
                     query = "Select sum(valuee) as Acumulado from dtPrecipitacio where station = '" & clvObs(i) & "' and datee >= '" & fechaD & " 08:00' and datee <= '" & fecha & " 07:00'"
                     adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                         If Not adoRs.EOF Then
                             'Escribe lluvia acumulada
-                            If (adoRs!Acumulado > 0 And adoRs!Acumulado < 0.1) Then
-                                Cells(j, col).Formula = "Inap"
+                            If (adoRs!Acumulado > 0 And adoRs!Acumulado <= 0.1) Then
+                                obs.Cells(j, col).Formula = "Inap"
                             Else
-                                Cells(j, col).Formula = Format(adoRs!Acumulado, "0.0")
+                                obs.Cells(j, col).Formula = Format(adoRs!Acumulado, "0.0")
                             End If
                         End If
                     adoRs.Close
@@ -78,10 +92,10 @@ Sub obtenerDatos()
                     adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                         If Not adoRs.EOF Then
                             'Escribe lluvia acumulada
-                            If (adoRs!Acumulado > 0 And adoRs!Acumulado < 0.1) Then
-                                Cells(j, col).Formula = "Inap"
+                            If (adoRs!Acumulado > 0 And adoRs!Acumulado <= 0.1) Then
+                                obs.Cells(j, col).Formula = "Inap"
                             Else
-                                Cells(j, col).Formula = Format(adoRs!Acumulado, "0.0")
+                                obs.Cells(j, col).Formula = Format(adoRs!Acumulado, "0.0")
                             End If
                         End If
                     adoRs.Close
@@ -90,16 +104,16 @@ Sub obtenerDatos()
                     query = "SELECT valuee FROM dtprecipitacio WHERE station = '" & clvObs(i) & "' AND datee = '" & fecha & " " & hora & "'"
                     adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                         If Not adoRs.EOF Then
-                            If (adoRs!valuee < 0 And adoRs!valuee < 0.1) Then
-                                Cells(j, col).Value = "Inap"
+                            If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
+                                obs.Cells(j, col).Value = "Inap"
                             Else
-                                Cells(j, col).Value = adoRs!valuee
+                                obs.Cells(j, col).Value = adoRs!valuee
                             End If
                         End If
                     adoRs.Close
                 End If
             Else
-                rojo col - 1, j
+                rojo col - 1, j, obs
             End If
         Next j
     Next i
@@ -116,7 +130,12 @@ Sub capturarDatos()
     Dim col As Integer
     Dim i As Integer
     Dim j As Integer
-    Dim bandera As Boolean
+    Dim ers As Boolean
+    Dim erc As Boolean
+    Dim obs As Excel.Worksheet
+    
+    Set obs = Worksheets("Observatorios")
+    'MsgBox "El valor es " & obs.Range("C13").Value
     
     clvObs(1) = "TXPVC"
     clvObs(2) = "XOBVC"
@@ -128,14 +147,16 @@ Sub capturarDatos()
     inicioFil = 11
     
     'Obtiene el número de la última fila
-    ultFil = Range("B" & rows.Count).End(xlUp).Row
+    ultFil = obs.Range("B" & rows.Count).End(xlUp).Row
     
-    bandera = True
+    ers = True
+    erc = True
     
     If (fecha = "") Then
-        'Obtiene la fecha actual
-        'fecha = Format(Now, "yyyy/mm/dd")
-        bandera = False
+        'Asigna la fecha actual
+        fecha = Format(Now, "yyyy/mm/dd")
+        obs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
+        obs.Range("E7").Interior.Color = RGB(221, 235, 247)
     End If
     
     
@@ -145,49 +166,55 @@ Sub capturarDatos()
     
     For i = 1 To 6
         col = i * 3
-        For j = inicioFil To ultFil - 1
-            lluvia = Format(Cells(j, col).Value, "0.0")
-            If (lluvia <> "") Then
-                hora = Format(Cells(j, col - 1).Value, "hh:mm")
-                If (IsDate(hora)) Then
-                    If (hora <> "17:00" And hora <> "07:00") Then
-                        'Valida lluvia
+        For j = inicioFil To ultFil
+            ers = True
+            hora = Format(obs.Cells(j, col - 1).Value, "hh:mm")
+            'Valida la hora
+            If (IsDate(hora)) Then
+                If (hora <> "17:00" And hora <> "07:00") Then
+                    blanco col - 1, j, obs
+                    'Valida el dato lluvia
+                    lluvia = obs.Cells(j, col).Value
+                    If (lluvia <> "") Then
                         If Not (IsNumeric(lluvia)) Then
                             If (lluvia = "inap" Or lluvia = "INAP" Or lluvia = "Inap") Then
                                 lluvia = 0.01
-                                blanco col, j
+                                blanco col, j, obs
                             Else
-                                rojo col, j
-                                bandera = False
+                                rojo col, j, obs
+                                ers = False
                             End If
                         ElseIf (CDbl(lluvia) >= 0) Then
                             If (CDbl(lluvia) <> 0.01) Then
                                 lluvia = Format(lluvia, "0.0")
-                                blanco col, j
+                                blanco col, j, obs
+                            Else
+                                obs.Cells(j, col).Value = "Inap"
+                                lluvia = 0.01
                             End If
                         Else
-                            rojo col, j
-                            bandera = False
+                            rojo col, j, obs
+                            ers = False
                         End If
-                        If bandera Then
+                        
+                        If ers Then
                             query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvObs(i) + "', '" + fecha + " " + hora + "', '" + lluvia + "', '" + lluvia + "', ' ', 'XL', ' ')"
                             adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
+                        Else
+                            erc = False
                         End If
+                        
                     End If
-                Else
-                    bandera = False
-                    rojo col - 1, j
                 End If
+            Else
+                rojo col - 1, j, obs
+                erc = False
             End If
         Next j
     Next i
     
     'Fin de la conexión
     dbSIH.Close
-    
-    If Not bandera Then
-        MsgBox "Alguna informacion es incorrecta", vbCritical, "ERROR"
-    End If
 
 End Sub
 Public Function setFecha(fec As String)
@@ -197,10 +224,10 @@ Public Function getFecha() As String
     getFecha = fecha
 End Function
 
-Private Sub rojo(col As Integer, rows As Integer)
-    Cells(rows, col).Interior.Color = vbRed
+Private Sub rojo(col As Integer, rows As Integer, ws As Excel.Worksheet)
+    ws.Cells(rows, col).Interior.Color = vbRed
 End Sub
-Private Sub blanco(col As Integer, rows As Integer)
-    Cells(rows, col).Interior.Color = xlNone
+Private Sub blanco(col As Integer, rows As Integer, ws As Excel.Worksheet)
+    ws.Cells(rows, col).Interior.Color = xlNone
 End Sub
 

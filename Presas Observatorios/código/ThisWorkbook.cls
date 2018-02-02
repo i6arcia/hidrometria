@@ -7,14 +7,20 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
+'*********************************************************************
+'           Sistema en apoyo a la captura de Lluvia y niveles
+'               de la dirección técnica en OCGC, CONAGUA
+'
+'*********************************************************************
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
     Observatorios.capturarDatos
     Observatorios.obtenerDatos
+    Presas.capturarDatos
+    Presas.obtenerDatos
 End Sub
 
 Private Sub Workbook_Open()
-    Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
-    Observatorios.setFecha Format(Now, "yyyy/mm/dd")
-    Observatorios.obtenerDatos
+    Observatorios.inicio
+    Presas.inicio
 End Sub
