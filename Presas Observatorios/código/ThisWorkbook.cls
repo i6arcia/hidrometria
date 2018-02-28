@@ -15,7 +15,7 @@ Attribute VB_Exposed = True
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
     Observatorios.capturarDatos
-    Observatorios.obtenerDatos
+    Observatorios.actualizar
     Presas.capturarDatos
     Presas.obtenerDatos
 End Sub

@@ -1,14 +1,14 @@
 Attribute VB_Name = "Presas"
 '*********************************************************************
-'           Sistema en apoyo a la captura de Lluvia para los
-'  Observatorio Meteorológicos de dirección técnica en OCGC, CONAGUA
+'           Sistema en apoyo a la captura de información de
+'           presas de la Dirección Técnica en OCGC, CONAGUA
 '
 '                               PRESAS
 '
 '*********************************************************************
 Option Explicit
 
-'Variables para conexion a la base de datos
+'Variables para conexión a la base de datos
 Private dbSIH As New ADODB.Connection
 Private adoRs As New ADODB.Recordset
 Private query As String
@@ -19,84 +19,38 @@ Private fechaD As String
 Private ultFil As Integer
 Private inicioFil As Integer
 Private prs As Excel.Worksheet
-
-'Desviacion estandar de las variables
-Private desv(7) As Double
-'Ultimos niveles
-Private ultNiv As Double
+'Variables de comparacion (Último nivel y Desviación estandar)
+Private varCom(6) As Double
 
 Sub inicio()
+    'Asigna hoja Presas a una variable
     Set prs = Worksheets("Presas")
+    'Coloca fecha y lugar como titulo de la hoja
     prs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
     prs.Range("E7").Interior.Color = RGB(221, 235, 247)
     fecha = Format(Now, "yyyy/mm/dd")
+    'Recupera datos de SIH
     obtenerDatos
 End Sub
 
-Sub desviacionStd()
-    Dim clvPrs(5) As String
-    Dim fechaDif As Date
-    Dim mesDif As Integer
-    Dim bandera1 As Boolean
-    Dim bandera2 As Boolean
-
-    Set prs = Worksheets("Presas")
-    'Obtiene el número de la última fila
-    ultFil = prs.Range("B" & rows.Count).End(xlUp).Row
-    'Número de meses de diferencia para obtener desviación estándar
-    mesDif = -1
-    'Obtiene la fecha actual
-    fecha = Format(Now, "short date")
-    'Fecha N días anterior
-    fechaDif = DateAdd("m", mesDif, fecha)
-    
-    'bandera1 = True
-    'bandera2 = True
-    
-    clvPrs(1) = "CDOOX"
-    clvPrs(2) = "LCAVC"
-    clvPrs(3) = "PCNVC"
-    clvPrs(4) = "CB2VC"
-    clvPrs(5) = "PB3VC"
-    
-    'Conexión
-    dbSIH.ConnectionString = "SIH"
-    dbSIH.Open
-    
-    query = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvPrs(1) & "' AND datee >= '" & Format(fechaDif, "yyyy/mm/dd hh:mm") & "' AND datee<= '" & Format(fecha, "yyyy/mm/dd hh:mm") & "'"
-    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
-    If Not adoRs.EOF Then
-        If (adoRs!desEs = 0) Then
-            sNiv = ""
-        Else
-            sNiv = adoRs!desEs
-        End If
-    End If
-    adoRs.Close
-    
-    'Fin de la conexión
-    dbSIH.Close
-
-End Sub
-
-
 Sub obtenerDatos()
-    Dim clvPrs(5) As String
+    'Variables
+    Dim clvPrs(4) As String
     Dim hora As String
     Dim colV As Integer
     Dim colH As Integer
     Dim i As Integer
-    
-    clvPrs(1) = "CDOOX"
-    clvPrs(2) = "LCAVC"
-    clvPrs(3) = "PCNVC"
-    clvPrs(4) = "CB2VC"
-    clvPrs(5) = "PB3VC"
-    
+    'Clave SIh para las presas
+    clvPrs(0) = "CDOOX" 'Cerro de Oro
+    clvPrs(1) = "LCAVC" 'La Cangrejera
+    clvPrs(2) = "PCNVC" 'La Cangrejera PB1
+    clvPrs(3) = "CB2VC" 'La Cangrejera PB2
+    clvPrs(4) = "PB3VC" 'La Cangrejera PB3
+    'Fila donde inicia la captura de datos
     inicioFil = 12
-    
+    'Confirma asignación de hoja Presas a la variable
     Set prs = Worksheets("Presas")
-    
+    'Obtiene número de la última fila con datos
     ultFil = prs.Range("B" & rows.Count).End(xlUp).Row
     
     If (fecha = "") Then
@@ -113,6 +67,7 @@ Sub obtenerDatos()
     'Conexión
     dbSIH.ConnectionString = "SIH"
     dbSIH.Open
+    
     'Obtiene datos de la presa Cerro de Oro
     colH = 2
     For i = inicioFil To ultFil
@@ -121,7 +76,7 @@ Sub obtenerDatos()
         If (IsDate(hora)) Then
             blanco colH, i
             'Consulta nivel de Presa Cerro de oro
-            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(0) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -129,7 +84,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta Almacenamiento de Presa Cerro de oro
-            query = "SELECT valuee FROM DTVolAlmac WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTVolAlmac WHERE station = '" & clvPrs(0) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -137,7 +92,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta Gasto de Presa Cerro de oro
-            query = "SELECT valuee FROM DTVertedor WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTVertedor WHERE station = '" & clvPrs(0) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -145,7 +100,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta Lluvia de Presa Cerro de oro
-            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(0) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
@@ -168,7 +123,7 @@ Sub obtenerDatos()
         If (IsDate(hora)) Then
             blanco colH, i
             'Consulta nivel de Presa Cerro de oro
-            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(2) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -176,7 +131,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta Almacenamiento de Presa Cerro de oro
-            query = "SELECT valuee FROM DTVolAlmac WHERE station = '" & clvPrs(2) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTVolAlmac WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.000")
@@ -184,7 +139,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta Lluvia de Presa Cerro de oro
-            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(2) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(1) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
@@ -196,7 +151,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta nivel de PB1
-            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(3) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(2) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -204,7 +159,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta lluvia de PB1
-            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(3) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(2) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
@@ -216,7 +171,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta lluvia de PB2
-            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(4) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(3) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
@@ -228,7 +183,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta nivel de PB3
-            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(5) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTNivel WHERE station = '" & clvPrs(4) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     prs.Cells(i, colV).Value = Format(adoRs!valuee, "0.00")
@@ -236,7 +191,7 @@ Sub obtenerDatos()
             adoRs.Close
             colV = colV + 1
             'Consulta lluvia de PB3
-            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(5) & "' AND datee = '" & fecha & " " & hora & "'"
+            query = "SELECT valuee FROM DTPrecipitacio WHERE station = '" & clvPrs(4) & "' AND datee = '" & fecha & " " & hora & "'"
             adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
                 If Not adoRs.EOF Then
                     If (adoRs!valuee > 0 And adoRs!valuee <= 0.1) Then
@@ -247,6 +202,7 @@ Sub obtenerDatos()
                 End If
             adoRs.Close
         Else
+            'Error en formato de hora
             rojo colH, i
         End If
     Next i
@@ -255,41 +211,49 @@ Sub obtenerDatos()
 End Sub
 
 Sub capturarDatos()
+    'Variables para datos
     Dim niv As String
     Dim alm As String
     Dim ver As String
     Dim llu As String
-    
+    'Variables para datos de plantas
     Dim p1N As String
     Dim p1L As String
     Dim p2L As String
     Dim p3N As String
     Dim p3L As String
-    
-    Dim clvPrs(5) As String
+    'Otras variables
+    Dim clvPrs(4) As String
     Dim hora As String
     Dim colH As Integer
     Dim colV As Integer
     Dim i As Integer
-    Dim ers As Boolean
-    Dim erc As Boolean
-    Dim prs As Excel.Worksheet
-    
+    Dim comp(2) As Double
+    'Banderas control de errores
+    Dim erf As Boolean 'Error en formato
+    Dim erc As Boolean 'Error en calculo
+
+    'Confirma asignacion de hoja a la variable
     Set prs = Worksheets("Presas")
     
-    clvPrs(1) = "CDOOX"
-    clvPrs(2) = "LCAVC"
-    clvPrs(3) = "PCNVC"
-    clvPrs(4) = "CB2VC"
-    clvPrs(5) = "PB3VC"
+    'Obtiene desviacion estandar de las variables para validación de datos
+    desStd
     
+    'Claves SIH para presas
+    clvPrs(0) = "CDOOX" 'Cerro de oro
+    clvPrs(1) = "LCAVC" 'La cangrejera
+    clvPrs(2) = "PCNVC" 'La cangrejera PB1
+    clvPrs(3) = "CB2VC" 'La cangrejera PB2
+    clvPrs(4) = "PB3VC" 'La cangrejera PB3
+    
+    'Número de fila que inicia con datos
     inicioFil = 12
     
-    'Obtiene el número de la última fila
+    'Obtiene el número de la última fila con datos
     ultFil = prs.Range("B" & rows.Count).End(xlUp).Row
-    
-    ers = True
-    erc = True
+    'Banderas control de errores
+    erf = False
+    erc = False
     
     If (fecha = "") Then
         'Asigna la fecha actual
@@ -298,18 +262,15 @@ Sub capturarDatos()
         prs.Range("E7").Interior.Color = RGB(221, 235, 247)
     End If
     
-    
-    'Conexión a la base de datos
-    dbSIH.ConnectionString = "SIH"
-    dbSIH.Open
-    
+    'Captura en SIH datos de Cerro de oro
     colH = 2
     colV = 4
     For i = inicioFil To ultFil
-        ers = True
+        erf = False
         hora = Format(prs.Cells(i, colH).Value, "hh:mm")
         If (IsDate(hora)) Then
             blanco colH, i
+            'Almacena los datos de la hora
             niv = prs.Cells(i, colV).Value
             alm = prs.Cells(i, colV + 1).Value
             ver = prs.Cells(i, colV + 2).Value
@@ -318,11 +279,21 @@ Sub capturarDatos()
             'Valida el valor de nivel
             If (niv <> "") Then
                 If (IsNumeric(niv)) Then
-                   niv = Format(niv, "0.00")
-                   blanco colV, i
+                    comp(0) = ultNiv(clvPrs(0), hora)
+                    comp(1) = comp(0) - varCom(0)
+                    comp(2) = comp(0) + varCom(0)
+                    If (niv >= comp(1) And niv <= comp(2)) Then
+                        niv = Format(niv, "0.00")
+                        blanco colV, i
+                    Else
+                        'Error de dato en calculo
+                        rojo colV, i
+                        erc = True
+                    End If
                 Else
+                    'ERROR, El valor debe ser numérico
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             'Valida el valor de almacenamiento
@@ -331,8 +302,9 @@ Sub capturarDatos()
                     alm = Format(alm, "0.00")
                     blanco colV + 1, i
                 Else
+                    'ERROR, el valor debe ser numérico
                     rojo colV + 1, i
-                    ers = False
+                    erf = True
                 End If
             End If
             'Valida el valor de gasto
@@ -341,8 +313,9 @@ Sub capturarDatos()
                     ver = Format(ver, "0.00")
                     blanco colV + 2, i
                 Else
+                    'ERROR, el valor debe ser numérico
                     rojo colV + 2, i
-                    ers = False
+                    erf = True
                 End If
             End If
             'valida el valor de lluvia
@@ -352,8 +325,9 @@ Sub capturarDatos()
                         llu = 0.01
                         blanco colV + 3, i
                     Else
+                        'ERROR, el valor solo puede ser numerico o cadena correspondiente a Inapreciable
                         rojo colV + 3, i
-                        ers = False
+                        erf = True
                     End If
                 ElseIf (CDbl(llu) >= 0) Then
                     If (CDbl(llu) <> 0.01) Then
@@ -364,33 +338,42 @@ Sub capturarDatos()
                         llu = 0.01
                     End If
                 Else
+                    'ERROR, el valor no puede ser menos a 0
                     rojo colV + 3, i
-                    ers = False
+                    erf = True
                 End If
             End If
-            
-            If ers Then
+            'Captura en SIH
+            If Not erf Then
+                'Conexión a la base de datos
+                dbSIH.ConnectionString = "SIH"
+                dbSIH.Open
                 If niv <> "" Then
-                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(0) + "', '" + fecha + " " + hora + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If alm <> "" Then
-                    query = "REPLACE INTO DTVolAlmac (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + alm + "', '" + alm + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTVolAlmac (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(0) + "', '" + fecha + " " + hora + "', '" + alm + "', '" + alm + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If ver <> "" Then
-                    query = "REPLACE INTO DTVertedor (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + ver + "', '" + ver + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTVertedor (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(0) + "', '" + fecha + " " + hora + "', '" + ver + "', '" + ver + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If llu <> "" Then
-                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + llu + "', '" + llu + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(0) + "', '" + fecha + " " + hora + "', '" + llu + "', '" + llu + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
+                'Fin de la conexión
+                dbSIH.Close
             Else
-                erc = False
+                'ERROR, Encontró algún dato incorrecto
+                erc = True
             End If
         Else
+            'Dato hora es incorrecto
             rojo colH, i
+            erc = True
         End If
     Next i
     
@@ -399,7 +382,7 @@ Sub capturarDatos()
     colV = 10
     For i = inicioFil To ultFil
         colV = 10
-        ers = True
+        erf = False
         hora = Format(prs.Cells(i, colH).Value, "hh:mm")
         If (IsDate(hora)) Then
             blanco colH, i
@@ -420,8 +403,9 @@ Sub capturarDatos()
                    niv = Format(niv, "0.00")
                    blanco colV, i
                 Else
+                    'ERROR, el nivel solo puede ser numérico
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -431,8 +415,9 @@ Sub capturarDatos()
                     alm = Format(alm, "0.000")
                     blanco colV, i
                 Else
+                    'ERROR, almacenamiento solo puede ser numérico
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -443,8 +428,9 @@ Sub capturarDatos()
                         llu = 0.01
                         blanco colV, i
                     Else
+                        'Lluvia de tipo cadena solo puede tener valor correspondiente a Inapreciable
                         rojo colV, i
-                        ers = False
+                        erf = True
                     End If
                 ElseIf (CDbl(llu) >= 0) Then
                     If (CDbl(llu) <> 0.01) Then
@@ -455,12 +441,12 @@ Sub capturarDatos()
                         llu = 0.01
                     End If
                 Else
+                    'ERROR, lluvia no puede ser menor a 0
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
-            
             
             'Valida el valor de nivel PB1
             If (p1N <> "") Then
@@ -468,8 +454,9 @@ Sub capturarDatos()
                    p1N = Format(p1N, "0.00")
                    blanco colV, i
                 Else
+                    'ERROR, Nivel solo puede ser numérico
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -480,8 +467,9 @@ Sub capturarDatos()
                         p1L = 0.01
                         blanco colV, i
                     Else
+                        'ERROR, Lluvia de tipo cadena solo puede ser correspondiente a Inapreciable
                         rojo colV, i
-                        ers = False
+                        erf = True
                     End If
                 ElseIf (CDbl(p1L) >= 0) Then
                     If (CDbl(p1L) <> 0.01) Then
@@ -492,8 +480,9 @@ Sub capturarDatos()
                         p1L = 0.01
                     End If
                 Else
+                    'ERROR, Lluvia no puede ser menor a 0
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -504,8 +493,9 @@ Sub capturarDatos()
                         p2L = 0.01
                         blanco colV, i
                     Else
+                        'ERROR, Lluvia de tipo cadena solo puede ser correspondiente a Inapreciable
                         rojo colV, i
-                        ers = False
+                        erf = True
                     End If
                 ElseIf (CDbl(p2L) >= 0) Then
                     If (CDbl(p2L) <> 0.01) Then
@@ -516,8 +506,9 @@ Sub capturarDatos()
                         p2L = 0.01
                     End If
                 Else
+                    'ERROR, Lluvia no puede ser menor a 0
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -527,8 +518,9 @@ Sub capturarDatos()
                    p3N = Format(p3N, "0.00")
                    blanco colV, i
                 Else
+                    'ERROR, Nivel solo puede ser numérico
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
             colV = colV + 1
@@ -539,8 +531,9 @@ Sub capturarDatos()
                         p3L = 0.01
                         blanco colV, i
                     Else
+                        'ERROR, Lluvia de tipo cadena solo puede ser correspondiente a Inapreciable
                         rojo colV, i
-                        ers = False
+                        erf = True
                     End If
                 ElseIf (CDbl(p3L) >= 0) Then
                     If (CDbl(p3L) <> 0.01) Then
@@ -551,63 +544,274 @@ Sub capturarDatos()
                         p3L = 0.01
                     End If
                 Else
+                    'ERROR, Lluvia no puede ser menor a 0
                     rojo colV, i
-                    ers = False
+                    erf = True
                 End If
             End If
-            If ers Then
+            'Captura información en SIH
+            If Not erf Then
+                'Conexión a la base de datos
+                dbSIH.ConnectionString = "SIH"
+                dbSIH.Open
+                'Información de Presa La Cangrejera
                 If niv <> "" Then
-                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(2) + "', '" + fecha + " " + hora + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + niv + "', '" + niv + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If alm <> "" Then
-                    query = "REPLACE INTO DTVolAlmac (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(2) + "', '" + fecha + " " + hora + "', '" + alm + "', '" + alm + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTVolAlmac (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + alm + "', '" + alm + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If llu <> "" Then
-                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(2) + "', '" + fecha + " " + hora + "', '" + llu + "', '" + llu + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(1) + "', '" + fecha + " " + hora + "', '" + llu + "', '" + llu + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
-                
-                
+                'Información de plantas
                 If p1N <> "" Then
-                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(3) + "', '" + fecha + " " + hora + "', '" + p1N + "', '" + p1N + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(2) + "', '" + fecha + " " + hora + "', '" + p1N + "', '" + p1N + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If p1L <> "" Then
-                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(3) + "', '" + fecha + " " + hora + "', '" + p1L + "', '" + p1L + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(2) + "', '" + fecha + " " + hora + "', '" + p1L + "', '" + p1L + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If p2L <> "" Then
-                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(4) + "', '" + fecha + " " + hora + "', '" + p2L + "', '" + p2L + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(3) + "', '" + fecha + " " + hora + "', '" + p2L + "', '" + p2L + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If p3N <> "" Then
-                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(5) + "', '" + fecha + " " + hora + "', '" + p3N + "', '" + p3N + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO DTNivel (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(4) + "', '" + fecha + " " + hora + "', '" + p3N + "', '" + p3N + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
                 If p3L <> "" Then
-                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(5) + "', '" + fecha + " " + hora + "', '" + p3L + "', '" + p3L + "', ' ', 'XL', ' ')"
+                    query = "REPLACE INTO dtprecipitacio (station, datee, valuee, corrvalue, msgcode, source, timewidth) VALUES ('" + clvPrs(4) + "', '" + fecha + " " + hora + "', '" + p3L + "', '" + p3L + "', ' ', 'XL', ' ')"
                     adoRs.Open query, dbSIH, adOpenDynamic, adLockOptimistic
                 End If
-                
+                'Fin de la conexión
+                dbSIH.Close
             Else
-                erc = False
+                'ERROR, Encontro algún dato incorrecto
+                erc = True
             End If
         Else
+            'El formato de hora no es correcto
             rojo colH, i
+            erc = True
         End If
     Next i
+    
+    If erc Then
+        MsgBox "Se encontraron errores en la información.", vbCritical
+    End If
+
+End Sub
+
+Sub desStd()
+    'Variables
+    Dim clvPrs(3) As String
+    Dim diasDif As Integer
+    Dim fch As String
+    
+    'Confirma asignacion de hoja a variable
+    Set prs = Worksheets("Presas")
+    'Número de dias de diferencia para obtener desviación estándar
+    diasDif = -5
+    
+    If (fecha = "") Then
+        'Asigna fecha actual
+        fecha = Format(Now, "yyyy/mm/dd")
+        prs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
+        prs.Range("E7").Interior.Color = RGB(221, 235, 247)
+    End If
+    
+    'Fecha N días anterior
+    fechaD = Format(DateAdd("d", diasDif, fecha), "yyyy/mm/dd 00:00")
+    
+    'Claves SIH para las presas
+    clvPrs(0) = "CDOOX" 'Cerro de Oro
+    clvPrs(1) = "LCAVC" 'La Cangrejera
+    clvPrs(2) = "PCNVC" 'La Cangrejera PB1
+    'PB2 unicamente captura datos de lluvia y no requiere calculo de desviación estandar
+    clvPrs(3) = "PB3VC" 'La Cangrejera PB3
+    
+    'Conexión
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Obtine la desviación estandar del valor nivel en Cerro de Oro
+    query = "SELECT STD(valuee) as desEs FROM dtNivel WHERE station = '" & clvPrs(0) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(0) = "SN"
+        Else
+            varCom(0) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    'Obtiene la desviación estandar del valor almacenamiento en Cerro de Oro
+    query = "SELECT STD(valuee)as desEs FROM DTVolAlmac WHERE station = '" & clvPrs(0) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(1) = "SN"
+        Else
+            varCom(1) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    'Obtiene la desviación estandar del valor gasto en Cerro de Oro
+    query = "SELECT STD(valuee)as desEs FROM DTVertedor WHERE station = '" & clvPrs(0) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(2) = "SN"
+        Else
+            varCom(2) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    
+    'Obtine la desviación estandar del valor nivel en La Cangrejera
+    query = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvPrs(1) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(3) = "SN"
+        Else
+            varCom(3) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    'Obtiene la desviación estandar del valor almacenamiento en La cangrejera
+    query = "SELECT STD(valuee)as desEs FROM DTVolAlmac WHERE station = '" & clvPrs(1) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(4) = "SN"
+        Else
+            varCom(4) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    'Obtine la desviación estandar del nivel en La Cangrejera PB1
+    query = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvPrs(2) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(5) = "SN"
+        Else
+            varCom(5) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    'Obtine la desviación estandar del nivel en La Cangrejera PB2
+    query = "SELECT STD(valuee)as desEs FROM dtNivel WHERE station = '" & clvPrs(3) & "' AND datee >= '" & fechaD & "' AND datee<= '" & fecha & " 23:59'"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+    If Not adoRs.EOF Then
+        If (adoRs!desEs = 0) Then
+            varCom(6) = "SN"
+        Else
+            varCom(6) = adoRs!desEs
+        End If
+    End If
+    adoRs.Close
+    
+    'Fin de la conexión
+    dbSIH.Close
+    
+
+End Sub
+
+Private Function ultNiv(clvSIH As String, hora As String) As Double
+    Dim diasD As Integer
+    Dim hra As String
+    'Confirma asignacion de hoja a variable
+    Set prs = Worksheets("Presas")
+    'Número de días para generar rango de fechas en la buqueda de valores
+    diasD = -2
+    If (fecha = "") Then
+        'Asigna fecha actual
+        fecha = Format(Now, "yyyy/mm/dd")
+        prs.Range("E7").Value = "Xalapa, Ver. -- " & Format(Now, "dddd") & " " & Format(Now, "dd") & " de " & Format(Now, "mmmm") & " de " & Format(Now, "yyyy") & " --"
+        prs.Range("E7").Interior.Color = RGB(221, 235, 247)
+    End If
+    'Fecha actual menos 1 minuto
+    hra = fecha & " " & hora
+    hra = Format(DateAdd("N", -1, hra), "yyyy/mm/dd hh:mm")
+    'Fecha diferida a la actual
+    fechaD = Format(DateAdd("d", diasD, fecha), "yyyy/mm/dd 00:00")
+    'Conexión
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Consulta el último valor de nivel capturado en Cerro de Oro
+    query = "SELECT valuee AS val FROM dtNivel WHERE station = '" & clvSIH & "' AND datee >= '" & fechaD & "' AND datee <= '" & hra & "' ORDER BY Datee DESC LIMIT 1"
+    'MsgBox query
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+        If Not adoRs.EOF Then
+            ultNiv = Format(adoRs!val, "0.00")
+        End If
+    adoRs.Close
     
     'Fin de la conexión
     dbSIH.Close
 
-End Sub
-
-Private Sub getDesviciones()
+End Function
+Private Function ultAlm(clvSIH As String, fecha As String) As Double
+    Dim diasD As Integer
     
+    'Confirma asignacion de hoja a variable
+    Set prs = Worksheets("Presas")
+    'Obtiene la fecha actual
+    fecha = Format(Now, "yyyy/mm/dd " & hora)
+    'Número de días para generar rango de fechas en la buqueda de valores
+    diasD = -2
+    'Fecha diferida a la actual
+    fechaD = Format(DateAdd("d", diasD, fecha), "yyyy/mm/dd 00:00")
+    'Conexión
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Consulta el último valor de nivel capturado en Cerro de Oro
+    query = "SELECT valuee AS val FROM DTVolAlmac WHERE station = '" & clvSIH & "' AND datee >= '" & fechaD & "' AND datee <= '" & fecha & "' ORDER BY Datee DESC LIMIT 1"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+        If Not adoRs.EOF Then
+            ultAlm = Format(adoRs!val, "0.00")
+        End If
+    adoRs.Close
+    
+    'Fin de la conexión
+    dbSIH.Close
+End Function
+Private Function ultGas(clvSIH As String, fecha As String) As Double
+    Dim diasD As Integer
+    
+    'Confirma asignacion de hoja a variable
+    Set prs = Worksheets("Presas")
+    'Obtiene la fecha actual
+    fecha = Format(Now, "yyyy/mm/dd " & hora)
+    'Número de días para generar rango de fechas en la buqueda de valores
+    diasD = -2
+    'Fecha diferida a la actual
+    fechaD = Format(DateAdd("d", diasD, fecha), "yyyy/mm/dd 00:00")
+    'Conexión
+    dbSIH.ConnectionString = "SIH"
+    dbSIH.Open
+    
+    'Consulta el último valor de nivel capturado en Cerro de Oro
+    query = "SELECT valuee AS val FROM DTVertedor WHERE station = '" & clvSIH & "' AND datee >= '" & fechaD & "' AND datee <= '" & fecha & "' ORDER BY Datee DESC LIMIT 1"
+    adoRs.Open query, dbSIH, adOpenStatic, adLockReadOnly
+        If Not adoRs.EOF Then
+            ultGas = Format(adoRs!val, "0.00")
+        End If
+    adoRs.Close
+    
+    'Fin de la conexión
+    dbSIH.Close
 
-End Sub
+End Function
 
 Public Function getFecha() As String
     getFecha = fecha
